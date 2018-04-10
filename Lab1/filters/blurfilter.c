@@ -59,30 +59,38 @@ void blurfilter(const int xsize, const int ysize, pixel* src, const int radius, 
 
   // Scatter horizontally
   
+  
+  
+  
   int num_rows_per_job = ceil(ysize/size_mpi);
   int from_row = (myid*num_rows_per_job);
   int to_row = from_row + num_rows_per_job < ysize ? from_row + num_rows_per_job : ysize;
   
+  pixel* rcv_buf = pixel*[num_rows_per_job*xsize];
+   
+  MPI_Scatterv(src, NULL, NULL, pixel_mpi, num_rows_per_job*xsize, pixel_mpi, 0, MPI_COMM_WORLD);
+  
+  // TODO Correct indexing
   for (y=from_row; y<to_row; y++) { // For each row
     for (x=0; x<xsize; x++) {
-      r = w[0] * pix(src, x, y, xsize)->r;
-      g = w[0] * pix(src, x, y, xsize)->g;
-      b = w[0] * pix(src, x, y, xsize)->b;
+      r = w[0] * pix(rcv_buf, x, y, xsize)->r;
+      g = w[0] * pix(rcv_buf, x, y, xsize)->g;
+      b = w[0] * pix(rcv_buf, x, y, xsize)->b;
       n = w[0];
       for ( wi=1; wi <= radius; wi++) {
 		wc = w[wi];
 		x2 = x - wi;
 		if(x2 >= 0) {
-		  r += wc * pix(src, x2, y, xsize)->r;
-		  g += wc * pix(src, x2, y, xsize)->g;
-		  b += wc * pix(src, x2, y, xsize)->b;
+		  r += wc * pix(rcv_buf, x2, y, xsize)->r;
+		  g += wc * pix(rcv_buf, x2, y, xsize)->g;
+		  b += wc * pix(rcv_buf, x2, y, xsize)->b;
 		  n += wc;
 		}
 		x2 = x + wi;
 		if(x2 < xsize) {
-		  r += wc * pix(src, x2, y, xsize)->r;
-		  g += wc * pix(src, x2, y, xsize)->g;
-		  b += wc * pix(src, x2, y, xsize)->b;
+		  r += wc * pix(rcv_buf, x2, y, xsize)->r;
+		  g += wc * pix(rcv_buf, x2, y, xsize)->g;
+		  b += wc * pix(rcv_buf, x2, y, xsize)->b;
 		  n += wc;
 		}
       }
@@ -93,6 +101,7 @@ void blurfilter(const int xsize, const int ysize, pixel* src, const int radius, 
   }
   
   // Gather
+  MPI_Scatterv(rcv_buf, num_rows_per_job*xsize, pixel_mpi, src, NULL, NULL, pixel_mpi, 0, MPI_COMM_WORLD);
   
   // Scatter verticaly
   
