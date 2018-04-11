@@ -26,17 +26,13 @@ pixel* pix(pixel* image, const int xx, const int yy, const int xsize)
 void blurfilter(const int xsize, const int ysize, pixel* src, const int radius, const double *w){
   int x,y,x2,y2, wi;
   double r,g,b,n, wc;
-  pixel dst[MAX_PIXELS];
+  //pixel dst[MAX_PIXELS];
   
   int myid;
   int size_mpi;
   MPI_Init(NULL, NULL);
   MPI_Comm_rank(MPI_COMM_WORLD, &myid);
   MPI_Comm_size(MPI_COMM_WORLD, &size_mpi);
-  
-  
-  
-  
   
   pixel item;
   MPI_Datatype pixel_mpi;
@@ -55,9 +51,11 @@ void blurfilter(const int xsize, const int ysize, pixel* src, const int radius, 
 
   MPI_Type_struct(3, block_length, displ, block_types, &pixel_mpi);
   MPI_Type_commit(&pixel_mpi);
+  MPI_Status status;
 
 
   // Scatter horizontally
+  
   
   
   
@@ -66,12 +64,28 @@ void blurfilter(const int xsize, const int ysize, pixel* src, const int radius, 
   int from_row = (myid*num_rows_per_job);
   int to_row = from_row + num_rows_per_job < ysize ? from_row + num_rows_per_job : ysize;
   
-  pixel* rcv_buf = pixel*[num_rows_per_job*xsize];
+  pixel rcv_buf[num_rows_per_job*xsize];
+  
+  int counts[size_mpi];
+  int offsets[size_mpi];
+  
+  pixel prov_dst[xsize*(num_rows_per_job  + 2*radius)];
+  int i = 0;
+  for (i = 0; i < size_mpi-1; ++i)
+  {
+	  counts[i] = num_rows_per_job*xsize;
+  } 
+  counts[size_mpi-1] = (ysize - (size_mpi-1)*num_rows_per_job)*xsize;
    
-  MPI_Scatterv(src, NULL, NULL, pixel_mpi, num_rows_per_job*xsize, pixel_mpi, 0, MPI_COMM_WORLD);
+  for (i = 0; i < size_mpi; ++i)
+  {
+	  offsets[i] = (num_rows_per_job*i)*xsize;
+  } 
+  
+ // MPI_Scatterv(src, counts, offsets, pixel_mpi, rcv_buf, counts[myid], pixel_mpi, 0, MPI_COMM_WORLD);
   
   // TODO Correct indexing
-  for (y=from_row; y<to_row; y++) { // For each row
+  /*for (y=0; y<counts[myid]/xsize; y++) { // For each row
     for (x=0; x<xsize; x++) {
       r = w[0] * pix(rcv_buf, x, y, xsize)->r;
       g = w[0] * pix(rcv_buf, x, y, xsize)->g;
@@ -94,49 +108,59 @@ void blurfilter(const int xsize, const int ysize, pixel* src, const int radius, 
 		  n += wc;
 		}
       }
-      pix(dst,x,y, xsize)->r = r/n;
-      pix(dst,x,y, xsize)->g = g/n;
-      pix(dst,x,y, xsize)->b = b/n;
+      pix(prov_dst,x,y+radius, xsize)->r = r/n;
+      pix(prov_dst,x,y+radius, xsize)->g = g/n;
+      pix(prov_dst,x,y+radius, xsize)->b = b/n;
     }
-  }
+  }*/
+  
+  
   
   // Gather
-  MPI_Scatterv(rcv_buf, num_rows_per_job*xsize, pixel_mpi, src, NULL, NULL, pixel_mpi, 0, MPI_COMM_WORLD);
+  //MPI_Scatterv(rcv_buf, num_rows_per_job*xsize, pixel_mpi, src, NULL, NULL, pixel_mpi, 0, MPI_COMM_WORLD);
   
   // Scatter verticaly
   
-  int num_cols_per_job = ceil(xsize/size_mpi);
-  int from_col = (myid*num_cols_per_job);
-  int to_col = from_row + num_col_per_job < xsize ? from_col+ num_cols_per_job : xsize;
-  for (y=0; y<ysize; y++)  {
-    for (x=from_col; x<to_col; x++) {
-      r = w[0] * pix(dst, x, y, xsize)->r;
-      g = w[0] * pix(dst, x, y, xsize)->g;
-      b = w[0] * pix(dst, x, y, xsize)->b;
+  // Send top rows to previous section, and next section
+  /*if (myid) MPI_Send(prov_dst+xsize*radius, xsize*radius, pixel_mpi, myid-1, 10, MPI_COMM_WORLD);
+  if (myid != size_mpi-1) MPI_Recv(prov_dst+(num_rows_per_job + radius)*xsize, xsize*radius, pixel_mpi, myid+1, 10, MPI_COMM_WORLD, &status);
+  
+  if (myid != size_mpi-1) MPI_Send(prov_dst+num_rows_per_job*xsize, xsize*radius, pixel_mpi, myid+1, 20, MPI_COMM_WORLD);
+  if (myid) MPI_Recv(prov_dst, xsize*radius, pixel_mpi, myid-1, 20, MPI_COMM_WORLD, &status);
+  
+  
+  
+  for (y=radius; y<counts[myid]/xsize+radius; y++)  {
+    for (x=0; x<xsize; x++) {
+      r = w[0] * pix(prov_dst, x, y, xsize)->r;
+      g = w[0] * pix(prov_dst, x, y, xsize)->g;
+      b = w[0] * pix(prov_dst, x, y, xsize)->b;
       n = w[0];
       for ( wi=1; wi <= radius; wi++) {
 		wc = w[wi];
 		y2 = y - wi;
-		if(y2 >= 0) {
-		  r += wc * pix(dst, x, y2, xsize)->r;
-		  g += wc * pix(dst, x, y2, xsize)->g;
-		  b += wc * pix(dst, x, y2, xsize)->b;
+		if(myid) {
+		  r += wc * pix(prov_dst, x, y2, xsize)->r;
+		  g += wc * pix(prov_dst, x, y2, xsize)->g;
+		  b += wc * pix(prov_dst, x, y2, xsize)->b;
 		  n += wc;
 		}
 		y2 = y + wi;
-		if(y2 < ysize) {
-		  r += wc * pix(dst, x, y2, xsize)->r;
-		  g += wc * pix(dst, x, y2, xsize)->g;
-		  b += wc * pix(dst, x, y2, xsize)->b;
+		if(myid != size_mpi-1) {
+		  r += wc * pix(prov_dst, x, y2, xsize)->r;
+		  g += wc * pix(prov_dst, x, y2, xsize)->g;
+		  b += wc * pix(prov_dst, x, y2, xsize)->b;
 		  n += wc;
 		}
       }
-      pix(src,x,y, xsize)->r = r/n;
-      pix(src,x,y, xsize)->g = g/n;
-      pix(src,x,y, xsize)->b = b/n;
+      pix(rcv_buf,x,y, xsize)->r = r/n;
+      pix(rcv_buf,x,y, xsize)->g = g/n;
+      pix(rcv_buf,x,y, xsize)->b = b/n;
     }
   }
   
+  MPI_Gatherv(rcv_buf, counts[myid], pixel_mpi, src, counts, offsets, pixel_mpi, 0, MPI_COMM_WORLD);
+  */
   // Gather
   MPI_Finalize();
 
