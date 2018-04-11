@@ -5,7 +5,7 @@
 #include "ppmio.h"
 #include "blurfilter.h"
 #include "gaussw.h"
-
+#include <mpi.h>
 
 int main (int argc, char ** argv) {
    int radius;
@@ -42,10 +42,14 @@ int main (int argc, char ** argv) {
     /* filter */
     get_gauss_weights(radius, w);
 
+    MPI_Init(NULL, NULL);
     printf("Calling filter\n");
 
     clock_gettime(CLOCK_REALTIME, &stime);
-
+    
+    
+    
+    
     blurfilter(xsize, ysize, src, radius, w);
 
     clock_gettime(CLOCK_REALTIME, &etime);
@@ -54,11 +58,17 @@ int main (int argc, char ** argv) {
 	   1e-9*(etime.tv_nsec  - stime.tv_nsec)) ;
 
     /* write result */
-    printf("Writing output file\n");
-    
-    if(write_ppm (argv[3], xsize, ysize, (char *)src) != 0)
-      exit(1);
+    int myid;
+    MPI_Comm_rank(MPI_COMM_WORLD, &myid);
 
+    if (myid == 0) {
+        printf("Writing output file\n");
+        if(write_ppm (argv[3], xsize, ysize, (char *)src) != 0)
+          exit(1);
+    }
+
+    
+    MPI_Finalize();
 
     return(0);
 }
