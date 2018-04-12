@@ -9,7 +9,7 @@
 int main (int argc, char ** argv) {
     int xsize, ysize, colmax;
     pixel src[MAX_PIXELS];
-    struct timespec stime, etime;
+    double stime, etime;
 
     /* Take care of the arguments */
 
@@ -17,38 +17,46 @@ int main (int argc, char ** argv) {
 	fprintf(stderr, "Usage: %s infile outfile\n", argv[0]);
 	exit(1);
     }
-
+    
+	MPI_Init(NULL, NULL);
+	
+	int myid;
+    MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+    
     /* read file */
-    if(read_ppm (argv[1], &xsize, &ysize, &colmax, (char *) src) != 0)
-        exit(1);
+    if (myid == 0)
+    {
+		if(read_ppm (argv[1], &xsize, &ysize, &colmax, (char *) src) != 0)
+			exit(1);
+		if (colmax > 255) {
+			fprintf(stderr, "Too large maximum color-component value\n");
+			exit(1);
+		}
+	}
+	MPI_Bcast(&xsize, 1, MPI_INT, 0, MPI_COMM_WORLD);
+	MPI_Bcast(&ysize, 1, MPI_INT, 0, MPI_COMM_WORLD);
+	MPI_Bcast(&colmax, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
-    if (colmax > 255) {
-	fprintf(stderr, "Too large maximum color-component value\n");
-	exit(1);
-    }
+  
 
     printf("Has read the image, calling filter\n");
+   
+    
+    stime = MPI_Wtime();
 
-    clock_gettime(CLOCK_REALTIME, &stime);
-     
-    MPI_Init(NULL, NULL);
-
-    int myid;
-    MPI_Comm_rank(MPI_COMM_WORLD, &myid);
     
     if (myid==0) {
       thresfilter(xsize, ysize, src);
     } else {
-      pixel dummy_src[1];
-      thresfilter(xsize, ysize, dummy_src);
+      //pixel dummy_src[1];
+      thresfilter(xsize, ysize, src);
     }
 
-    
-
-    clock_gettime(CLOCK_REALTIME, &etime);
-
-    printf("Filtering took: %g secs\n", (etime.tv_sec  - stime.tv_sec) +
-	   1e-9*(etime.tv_nsec  - stime.tv_nsec)) ;
+ 
+    //clock_gettime(CLOCK_REALTIME, &etime);
+	
+	etime = MPI_Wtime();
+    printf("Filtering took: %g secs\n", (etime - stime)) ;
 
     /* write result */
     printf("Writing output file\n");

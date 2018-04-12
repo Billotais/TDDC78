@@ -59,8 +59,6 @@ void blurfilter(const int xsize, const int ysize, pixel* src, const int radius, 
   
   
   
-  
-  
   int num_rows_per_job = ceil((float)ysize/(float)size_mpi);
   int from_row = (myid*num_rows_per_job);
   int to_row = from_row + num_rows_per_job < ysize ? from_row + num_rows_per_job : ysize;

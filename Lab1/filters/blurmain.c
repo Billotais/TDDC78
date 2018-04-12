@@ -11,7 +11,7 @@ int main (int argc, char ** argv) {
    int radius;
     int xsize, ysize, colmax;
     pixel src[MAX_PIXELS];
-    struct timespec stime, etime;
+    double stime, etime;
 #define MAX_RAD 1000
 
     double w[MAX_RAD];
@@ -28,39 +28,45 @@ int main (int argc, char ** argv) {
 	exit(1);
     }
 
-    /* read file */
-    if(read_ppm (argv[2], &xsize, &ysize, &colmax, (char *) src) != 0)
-        exit(1);
+	MPI_Init(NULL, NULL);
 
-    if (colmax > 255) {
-	fprintf(stderr, "Too large maximum color-component value\n");
-	exit(1);
-    }
+    int myid;
+    MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+    /* read file */
+    if (myid == 0)
+    {
+		if(read_ppm (argv[2], &xsize, &ysize, &colmax, (char *) src) != 0)
+			exit(1);
+        if (colmax > 255) {
+			fprintf(stderr, "Too large maximum color-component value\n");
+			exit(1);
+		}
+	}
+   
+	MPI_Bcast(&xsize, 1, MPI_INT, 0, MPI_COMM_WORLD);
+	MPI_Bcast(&ysize, 1, MPI_INT, 0, MPI_COMM_WORLD);
+	MPI_Bcast(&colmax, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    
 
     printf("Has read the image, generating coefficients\n");
 
     /* filter */
     get_gauss_weights(radius, w);
-
     
     printf("Calling filter\n");
  
-    MPI_Init(NULL, NULL);
-    clock_gettime(CLOCK_REALTIME, &stime);
+    //clock_gettime(CLOCK_REALTIME, &stime);
+    stime = MPI_Wtime();
+
     
-    int myid;
-    MPI_Comm_rank(MPI_COMM_WORLD, &myid);
-    
+
     if (myid==0) {
       blurfilter(xsize, ysize, src, radius, w);
     } else {
-      pixel dummy_src[1];
-      blurfilter(xsize, ysize, dummy_src, radius, w);
+      blurfilter(xsize, ysize, src, radius, w);
     }
-    clock_gettime(CLOCK_REALTIME, &etime);
-
-    printf("Filtering took: %g secs\n", (etime.tv_sec  - stime.tv_sec) +
-	   1e-9*(etime.tv_nsec  - stime.tv_nsec)) ;
+	etime = MPI_Wtime();
+    printf("Filtering took: %g secs\n", (etime  - stime)) ;
 
     /* write result */
     
