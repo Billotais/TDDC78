@@ -8,7 +8,7 @@
 #include "blurfilter.h"
 #include "ppmio.h"
 #include <mpi.h>
-
+#include <math.h>
 
 pixel* pix(pixel* image, const int xx, const int yy, const int xsize)
 {
