@@ -1,8 +1,7 @@
 /*
   File: blurfilter.c
 
-  Implementation of blurfilter function.
-    
+  Implementation of blurfilter function.    
  */
 #include <stdio.h>
 #include "blurfilter.h"
