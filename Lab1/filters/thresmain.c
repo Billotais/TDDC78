@@ -4,6 +4,7 @@
 #include <time.h>
 #include "ppmio.h"
 #include "thresfilter.h"
+#include <mpi.h>
 
 int main (int argc, char ** argv) {
     int xsize, ysize, colmax;
@@ -29,8 +30,20 @@ int main (int argc, char ** argv) {
     printf("Has read the image, calling filter\n");
 
     clock_gettime(CLOCK_REALTIME, &stime);
+     
+    MPI_Init(NULL, NULL);
 
-    thresfilter(xsize, ysize, src);
+    int myid;
+    MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+    
+    if (myid==0) {
+      thresfilter(xsize, ysize, src);
+    } else {
+      pixel dummy_src[1];
+      thresfilter(xsize, ysize, dummy_src);
+    }
+
+    
 
     clock_gettime(CLOCK_REALTIME, &etime);
 
@@ -40,8 +53,12 @@ int main (int argc, char ** argv) {
     /* write result */
     printf("Writing output file\n");
     
-    if(write_ppm (argv[2], xsize, ysize, (char *)src) != 0)
-      exit(1);
+    if (myid == 0) {
+        printf("Writing output file\n");
+        if(write_ppm (argv[2], xsize, ysize, (char *)src) != 0)
+          exit(1);
+    }
+    MPI_Finalize();
 
 
     return(0);

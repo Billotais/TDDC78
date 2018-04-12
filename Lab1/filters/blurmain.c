@@ -42,24 +42,28 @@ int main (int argc, char ** argv) {
     /* filter */
     get_gauss_weights(radius, w);
 
-    MPI_Init(NULL, NULL);
+    
     printf("Calling filter\n");
-
+ 
+    MPI_Init(NULL, NULL);
     clock_gettime(CLOCK_REALTIME, &stime);
     
+    int myid;
+    MPI_Comm_rank(MPI_COMM_WORLD, &myid);
     
-    
-    
-    blurfilter(xsize, ysize, src, radius, w);
-
+    if (myid==0) {
+      blurfilter(xsize, ysize, src, radius, w);
+    } else {
+      pixel dummy_src[1];
+      blurfilter(xsize, ysize, dummy_src, radius, w);
+    }
     clock_gettime(CLOCK_REALTIME, &etime);
 
     printf("Filtering took: %g secs\n", (etime.tv_sec  - stime.tv_sec) +
 	   1e-9*(etime.tv_nsec  - stime.tv_nsec)) ;
 
     /* write result */
-    int myid;
-    MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+    
 
     if (myid == 0) {
         printf("Writing output file\n");
