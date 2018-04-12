@@ -18,5 +18,8 @@ arc:
 	tar cf - *.c *.h *.f90 Makefile Makefile.sgi|gzip - > filters.tar.gz
 	
 blur:
-	mpicc -Nmpi -o out blurfilter.c blurmain.c gaussw.c ppmio.c $(LFLAGS)
+	mpicc -Nmpi -o blur blurfilter.c blurmain.c gaussw.c ppmio.c $(LFLAGS)
+	
+thres: 
+	mpicc -Nmpi -o thres thresmain.c thresfilter.c ppmio.c
 	
