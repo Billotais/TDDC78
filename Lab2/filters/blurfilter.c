@@ -21,21 +21,6 @@ pixel* pix(pixel* image, const int xx, const int yy, const int xsize)
 #endif
   return (image + off);
 }
-//const int xsize, const int ysize, pixel* src, const int radius, const double *w
-
-typedef struct {
-		int xsize;
-		int ysize;
-		int start;
-		int end;
-		pixel* src;
-		pixel* dst;
-		int radius;
-		const double *w;
-		pthread_barrier_t* barr;
-} thread_data;
-
-
 
 void* blurfilter(void * args){
   int x,y,x2,y2, wi;
@@ -59,21 +44,21 @@ void* blurfilter(void * args){
       b = w[0] * pix(src, x, y, xsize)->b;
       n = w[0];
       for ( wi=1; wi <= radius; wi++) {
-	wc = w[wi];
-	x2 = x - wi;
-	if(x2 >= 0) {
-	  r += wc * pix(src, x2, y, xsize)->r;
-	  g += wc * pix(src, x2, y, xsize)->g;
-	  b += wc * pix(src, x2, y, xsize)->b;
-	  n += wc;
-	}
-	x2 = x + wi;
-	if(x2 < xsize) {
-	  r += wc * pix(src, x2, y, xsize)->r;
-	  g += wc * pix(src, x2, y, xsize)->g;
-	  b += wc * pix(src, x2, y, xsize)->b;
-	  n += wc;
-	}
+				wc = w[wi];
+				x2 = x - wi;
+				if(x2 >= 0) {
+					r += wc * pix(src, x2, y, xsize)->r;
+					g += wc * pix(src, x2, y, xsize)->g;
+					b += wc * pix(src, x2, y, xsize)->b;
+					n += wc;
+				}
+				x2 = x + wi;
+				if(x2 < xsize) {
+					r += wc * pix(src, x2, y, xsize)->r;
+					g += wc * pix(src, x2, y, xsize)->g;
+					b += wc * pix(src, x2, y, xsize)->b;
+					n += wc;
+				}
       }
       pix(dst,x,y, xsize)->r = r/n;
       pix(dst,x,y, xsize)->g = g/n;
@@ -93,21 +78,21 @@ void* blurfilter(void * args){
       b = w[0] * pix(dst, x, y, xsize)->b;
       n = w[0];
       for ( wi=1; wi <= radius; wi++) {
-	wc = w[wi];
-	y2 = y - wi;
-	if(y2 >= 0) {
-	  r += wc * pix(dst, x, y2, xsize)->r;
-	  g += wc * pix(dst, x, y2, xsize)->g;
-	  b += wc * pix(dst, x, y2, xsize)->b;
-	  n += wc;
-	}
-	y2 = y + wi;
-	if(y2 < ysize) {
-	  r += wc * pix(dst, x, y2, xsize)->r;
-	  g += wc * pix(dst, x, y2, xsize)->g;
-	  b += wc * pix(dst, x, y2, xsize)->b;
-	  n += wc;
-	}
+				wc = w[wi];
+				y2 = y - wi;
+				if(y2 >= 0) {
+					r += wc * pix(dst, x, y2, xsize)->r;
+					g += wc * pix(dst, x, y2, xsize)->g;
+					b += wc * pix(dst, x, y2, xsize)->b;
+					n += wc;
+				}
+				y2 = y + wi;
+				if(y2 < ysize) {
+					r += wc * pix(dst, x, y2, xsize)->r;
+					g += wc * pix(dst, x, y2, xsize)->g;
+					b += wc * pix(dst, x, y2, xsize)->b;
+					n += wc;
+				}
       }
       pix(src,x,y, xsize)->r = r/n;
       pix(src,x,y, xsize)->g = g/n;
