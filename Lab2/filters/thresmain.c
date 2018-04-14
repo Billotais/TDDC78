@@ -4,6 +4,8 @@
 #include <time.h>
 #include "ppmio.h"
 #include "thresfilter.h"
+#include <pthread.h>
+#include <math.h>
 
 int main (int argc, char ** argv) {
     int xsize, ysize, colmax;
@@ -12,27 +14,61 @@ int main (int argc, char ** argv) {
 
     /* Take care of the arguments */
 
-    if (argc != 3) {
-	fprintf(stderr, "Usage: %s infile outfile\n", argv[0]);
-	exit(1);
+    if (argc != 4) {
+        fprintf(stderr, "Usage: %s infile outfile nthreads\n", argv[0]);
+        exit(1);
     }
+    int nthreads = atoi(argv[3]);
 
     /* read file */
     if(read_ppm (argv[1], &xsize, &ysize, &colmax, (char *) src) != 0)
         exit(1);
 
     if (colmax > 255) {
-	fprintf(stderr, "Too large maximum color-component value\n");
-	exit(1);
+        fprintf(stderr, "Too large maximum color-component value\n");
+        exit(1);
     }
 
     printf("Has read the image, calling filter\n");
 
     clock_gettime(CLOCK_REALTIME, &stime);
 
-    thresfilter(xsize, ysize, src);
+    
+
+
+    pthread_t* threads = calloc(nthreads, sizeof(pthread_t)); // All threads
+    thread_data* thread_datas = calloc(nthreads, sizeof(thread_data)); // All data given to threads
+
+    // Init barrier
+    pthread_barrier_t barr;
+    pthread_barrier_init(&barr, NULL, nthreads);
+    // Init lock
+    pthread_mutex_t lock;
+    pthread_mutex_init(&lock, NULL);
+
+    int sum = 0;
+    for (int i = 0; i < nthreads; ++i)
+    {
+		int num_rows_per_job = ceil((float)ysize/(float)nthreads);
+		int from_row = (i*num_rows_per_job);
+		int to_row = from_row + num_rows_per_job < ysize ? from_row + num_rows_per_job : ysize;
+		
+        thread_datas[i] = (thread_data){xsize, ysize, from_row, to_row, &sum, src, &barr, &lock};
+		
+		pthread_create(threads + i, NULL, thresfilter, thread_datas + i);
+		
+	}
+	for (int i = 0; i < nthreads; ++i)
+	{
+		pthread_join(threads[i], NULL);
+	}
+    
+	pthread_barrier_destroy(&barr);
+
+
 
     clock_gettime(CLOCK_REALTIME, &etime);
+
 
     printf("Filtering took: %g secs\n", (etime.tv_sec  - stime.tv_sec) +
 	   1e-9*(etime.tv_nsec  - stime.tv_nsec)) ;
