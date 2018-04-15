@@ -1,4 +1,5 @@
 #include "thresfilter.h"
+#include <stdlib.h>
 #include <mpi.h>
 #include <math.h>
 void thresfilter(const int xsize, const int ysize, pixel* src){
@@ -6,9 +7,7 @@ void thresfilter(const int xsize, const int ysize, pixel* src){
 
   int myid;
   int size_mpi;
-  //MPI_Init(NULL, NULL);
 
-  //pixel dst[MAX_PIXELS];
   MPI_Comm_rank(MPI_COMM_WORLD, &myid);
   MPI_Comm_size(MPI_COMM_WORLD, &size_mpi);
   
@@ -32,9 +31,10 @@ void thresfilter(const int xsize, const int ysize, pixel* src){
   MPI_Status status;
 
 
-  // Scatter horizontally
+  // The image is split horizontally into blocks, and each worker works
+  // on one block
   int num_rows_per_job = ceil((float)ysize/(float)size_mpi);
-  pixel rcv_buf[num_rows_per_job*xsize];
+  pixel* rcv_buf = (pixel*)calloc(num_rows_per_job*xsize, sizeof(pixel));
   
   int counts[size_mpi];
   int offsets[size_mpi];
@@ -58,6 +58,7 @@ void thresfilter(const int xsize, const int ysize, pixel* src){
 
   nump = xsize * ysize;
 
+  // Calculate the sum
   for(i = 0, sum = 0; i < counts[myid]; i++) {
     sum += (uint)rcv_buf[i].r + (uint)rcv_buf[i].g + (uint)rcv_buf[i].b;
   }
@@ -66,14 +67,16 @@ void thresfilter(const int xsize, const int ysize, pixel* src){
   uint sum_all;
   MPI_Reduce(&sum, &sum_all, 1, MPI_UNSIGNED, MPI_SUM, 0, MPI_COMM_WORLD);
 
+  // Calculate average
   sum = sum_all;
   if (myid==0) {
       sum /= nump;
   }
 
-  // Broadcast
+  // Broadcast average to all workers
   MPI_Bcast(&sum, 1, MPI_UNSIGNED, 0, MPI_COMM_WORLD);
 
+  // Threshold
   for(i = 0; i < counts[myid]; i++) {
     psum = (uint)rcv_buf[i].r + (uint)rcv_buf[i].g + (uint)rcv_buf[i].b;
     if(sum > psum) {
@@ -85,4 +88,5 @@ void thresfilter(const int xsize, const int ysize, pixel* src){
   }
 
   MPI_Gatherv(rcv_buf, counts[myid], pixel_mpi, src, counts, offsets, pixel_mpi, 0, MPI_COMM_WORLD);
+  free(rcv_buf);
 }

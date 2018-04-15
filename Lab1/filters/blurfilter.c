@@ -4,6 +4,7 @@
   Implementation of blurfilter function.
     
  */
+#include <stdlib.h>
 #include <stdio.h>
 #include "blurfilter.h"
 #include "ppmio.h"
@@ -29,12 +30,12 @@ void blurfilter(const int xsize, const int ysize, pixel* src, const int radius, 
   
   int myid;
   int size_mpi;
-  //MPI_Init(NULL, NULL);
 
-  //pixel dst[MAX_PIXELS];
+  // Get mpi info
   MPI_Comm_rank(MPI_COMM_WORLD, &myid);
   MPI_Comm_size(MPI_COMM_WORLD, &size_mpi);
   
+  // mpi datatype
   pixel item;
   MPI_Datatype pixel_mpi;
   int block_length[] = {1, 1, 1};
@@ -54,21 +55,20 @@ void blurfilter(const int xsize, const int ysize, pixel* src, const int radius, 
   MPI_Type_commit(&pixel_mpi);
   MPI_Status status;
 
+  // The image is split horizontally into blocks, and each worker works
+  // on one block
 
-  // Scatter horizontally
-  
-  
-  
   int num_rows_per_job = ceil((float)ysize/(float)size_mpi);
   int from_row = (myid*num_rows_per_job);
   int to_row = from_row + num_rows_per_job < ysize ? from_row + num_rows_per_job : ysize;
   
-  pixel rcv_buf[num_rows_per_job*xsize];
+  pixel* rcv_buf = (pixel*)calloc(num_rows_per_job*xsize, sizeof(pixel));
   
   int counts[size_mpi];
   int offsets[size_mpi];
   
-  pixel prov_dst[xsize*(num_rows_per_job  + 2*radius)];
+  pixel* prov_dst = (pixel*)calloc(xsize*(num_rows_per_job  + 2*radius), sizeof(pixel));
+
   int i = 0;
   for (i = 0; i < size_mpi-1; ++i)
   {
@@ -81,11 +81,9 @@ void blurfilter(const int xsize, const int ysize, pixel* src, const int radius, 
 	  offsets[i] = (num_rows_per_job*i)*xsize;
   } 
   
-  //fprintf(stderr, "\n myid, size?mpi: %d %d %d\n",counts[myid], offsets[myid], myid);
-//fprintf(stderr, "\n num rows, xsize: %d %d\n",num_rows_per_job, xsize);
+  // Scatter
   MPI_Scatterv(src, counts, offsets, pixel_mpi, rcv_buf, counts[myid], pixel_mpi, 0, MPI_COMM_WORLD);
   
-  // TODO Correct indexing
   for (y=0; y<counts[myid]/xsize; y++) { // For each row
     for (x=0; x<xsize; x++) {
       r = w[0] * pix(rcv_buf, x, y, xsize)->r;
@@ -115,22 +113,16 @@ void blurfilter(const int xsize, const int ysize, pixel* src, const int radius, 
     }
   }
   
-
-  
-  // Gather
-  //MPI_Scatterv(rcv_buf, num_rows_per_job*xsize, pixel_mpi, src, NULL, NULL, pixel_mpi, 0, MPI_COMM_WORLD);
-  
-  // Scatter verticaly
-  
+  // When applying the blur filter along y, we need to get the processed data from
+  // other workers
   // Send top rows to previous section, and next section
-
   if (myid) MPI_Send(prov_dst+xsize*radius, xsize*radius, pixel_mpi, myid-1, 10, MPI_COMM_WORLD);
   if (myid != size_mpi-1) MPI_Recv(prov_dst+(num_rows_per_job + radius)*xsize, xsize*radius, pixel_mpi, myid+1, 10, MPI_COMM_WORLD, &status);
   
   if (myid != size_mpi-1) MPI_Send(prov_dst+num_rows_per_job*xsize, xsize*radius, pixel_mpi, myid+1, 20, MPI_COMM_WORLD);
   if (myid) MPI_Recv(prov_dst, xsize*radius, pixel_mpi, myid-1, 20, MPI_COMM_WORLD, &status);
   
-
+  // Apply vertical blur
   for (y=radius; y<counts[myid]/xsize+radius; y++)  {
     for (x=0; x<xsize; x++) {
       r = w[0] * pix(prov_dst, x, y, xsize)->r;
@@ -156,7 +148,6 @@ void blurfilter(const int xsize, const int ysize, pixel* src, const int radius, 
 		}
       }
 
-      //fprintf(stderr, "\n yooooo\n");
       pix(rcv_buf,x,y-radius, xsize)->r = r/n;
       pix(rcv_buf,x,y-radius, xsize)->g = g/n;
       pix(rcv_buf,x,y-radius, xsize)->b = b/n;
@@ -166,12 +157,9 @@ void blurfilter(const int xsize, const int ysize, pixel* src, const int radius, 
 
 
   MPI_Gatherv(rcv_buf, counts[myid], pixel_mpi, src, counts, offsets, pixel_mpi, 0, MPI_COMM_WORLD);
- 
-  //char outname[30];
-  //sprintf(outname, "out_%d_src.ppm", myid);
-  // write_ppm (outname, xsize, ysize, (char *)dst); 
-  // Gather
-  
+
+  free(rcv_buf);
+  free(prov_dst);
 }
 
 
