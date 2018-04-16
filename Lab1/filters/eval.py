@@ -9,7 +9,7 @@ from subprocess import check_output
 # List of images
 images = {"im1", "im2", "im3", "im4"}
 
-num_jobs = range(0, 7)  #7
+num_jobs = range(0, 5)  #7
 num_jobs = [2**i for i in num_jobs]
 
 filter_rad = range(1,8)  #8
@@ -51,6 +51,7 @@ for img in images:
 
 	# Plot speedup
 	speedup = time_all / time_all[0,:]
+	speedup = 1 / speedup
 
 	for r_id, r in enumerate(filter_rad, 0):
 		plot_label = "Radius = " + str(r)
