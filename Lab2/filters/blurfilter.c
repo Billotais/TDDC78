@@ -6,9 +6,6 @@
 #include <stdio.h>
 #include "blurfilter.h"
 
-
-
-
 pixel* pix(pixel* image, const int xx, const int yy, const int xsize)
 {
   register int off = xsize*yy + xx;
