@@ -1,3 +1,6 @@
+import matplotlib
+matplotlib.use('Agg')
+
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -43,7 +46,7 @@ for img in images:
 
 	plt.legend()
 
-	plt.savefig('plots/'+img+'_plot.png', bbox_inches='tight')
+	plt.savefig('plots_blur/'+img+'_plot.png', bbox_inches='tight')
 	plt.close()
 
 	# Plot speedup
@@ -64,7 +67,7 @@ for img in images:
 
 	plt.legend()
 
-	plt.savefig('plots/'+img+'_plot_speedup.png', bbox_inches='tight')
+	plt.savefig('plots_blur/'+img+'_plot_speedup.png', bbox_inches='tight')
 	plt.close()
 
 
