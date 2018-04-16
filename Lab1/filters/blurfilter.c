@@ -91,21 +91,21 @@ void blurfilter(const int xsize, const int ysize, pixel* src, const int radius, 
       b = w[0] * pix(rcv_buf, x, y, xsize)->b;
       n = w[0];
       for ( wi=1; wi <= radius; wi++) {
-		wc = w[wi];
-		x2 = x - wi;
-		if(x2 >= 0) {
-		  r += wc * pix(rcv_buf, x2, y, xsize)->r;
-		  g += wc * pix(rcv_buf, x2, y, xsize)->g;
-		  b += wc * pix(rcv_buf, x2, y, xsize)->b;
-		  n += wc;
-		}
-		x2 = x + wi;
-		if(x2 < xsize) {
-		  r += wc * pix(rcv_buf, x2, y, xsize)->r;
-		  g += wc * pix(rcv_buf, x2, y, xsize)->g;
-		  b += wc * pix(rcv_buf, x2, y, xsize)->b;
-		  n += wc;
-		}
+        wc = w[wi];
+        x2 = x - wi;
+        if(x2 >= 0) {
+          r += wc * pix(rcv_buf, x2, y, xsize)->r;
+          g += wc * pix(rcv_buf, x2, y, xsize)->g;
+          b += wc * pix(rcv_buf, x2, y, xsize)->b;
+          n += wc;
+        }
+        x2 = x + wi;
+        if(x2 < xsize) {
+          r += wc * pix(rcv_buf, x2, y, xsize)->r;
+          g += wc * pix(rcv_buf, x2, y, xsize)->g;
+          b += wc * pix(rcv_buf, x2, y, xsize)->b;
+          n += wc;
+        }
       }
       pix(prov_dst,x,y+radius, xsize)->r = r/n;
       pix(prov_dst,x,y+radius, xsize)->g = g/n;
@@ -117,9 +117,9 @@ void blurfilter(const int xsize, const int ysize, pixel* src, const int radius, 
   // other workers
   // Send top rows to previous section, and next section
   if (myid) MPI_Send(prov_dst+xsize*radius, xsize*radius, pixel_mpi, myid-1, 10, MPI_COMM_WORLD);
-  if (myid != size_mpi-1) MPI_Recv(prov_dst+(num_rows_per_job + radius)*xsize, xsize*radius, pixel_mpi, myid+1, 10, MPI_COMM_WORLD, &status);
+  if (myid != size_mpi-1) MPI_Recv(prov_dst+counts[myid]+radius*xsize, xsize*radius, pixel_mpi, myid+1, 10, MPI_COMM_WORLD, &status);
   
-  if (myid != size_mpi-1) MPI_Send(prov_dst+num_rows_per_job*xsize, xsize*radius, pixel_mpi, myid+1, 20, MPI_COMM_WORLD);
+  if (myid != size_mpi-1) MPI_Send(prov_dst+counts[myid], xsize*radius, pixel_mpi, myid+1, 20, MPI_COMM_WORLD);
   if (myid) MPI_Recv(prov_dst, xsize*radius, pixel_mpi, myid-1, 20, MPI_COMM_WORLD, &status);
   
   // Apply vertical blur
@@ -131,21 +131,21 @@ void blurfilter(const int xsize, const int ysize, pixel* src, const int radius, 
       n = w[0];
 
       for ( wi=1; wi <= radius; wi++) {
-		wc = w[wi];
-		y2 = y - wi;
-		if(myid) {
-		  r += wc * pix(prov_dst, x, y2, xsize)->r;
-		  g += wc * pix(prov_dst, x, y2, xsize)->g;
-		  b += wc * pix(prov_dst, x, y2, xsize)->b;
-		  n += wc;
-		}
-		y2 = y + wi;
-		if(myid != size_mpi-1) {
-		  r += wc * pix(prov_dst, x, y2, xsize)->r;
-		  g += wc * pix(prov_dst, x, y2, xsize)->g;
-		  b += wc * pix(prov_dst, x, y2, xsize)->b;
-		  n += wc;
-		}
+        wc = w[wi];
+        y2 = y - wi;
+        if(y2 >=0) {
+          r += wc * pix(prov_dst, x, y2, xsize)->r;
+          g += wc * pix(prov_dst, x, y2, xsize)->g;
+          b += wc * pix(prov_dst, x, y2, xsize)->b;
+          n += wc;
+        }
+        y2 = y + wi;
+        if(y2 < counts[myid]/xsize+2*radius) {
+          r += wc * pix(prov_dst, x, y2, xsize)->r;
+          g += wc * pix(prov_dst, x, y2, xsize)->g;
+          b += wc * pix(prov_dst, x, y2, xsize)->b;
+          n += wc;
+        }
       }
 
       pix(rcv_buf,x,y-radius, xsize)->r = r/n;
@@ -153,7 +153,6 @@ void blurfilter(const int xsize, const int ysize, pixel* src, const int radius, 
       pix(rcv_buf,x,y-radius, xsize)->b = b/n;
     }
   }
-  
 
 
   MPI_Gatherv(rcv_buf, counts[myid], pixel_mpi, src, counts, offsets, pixel_mpi, 0, MPI_COMM_WORLD);
