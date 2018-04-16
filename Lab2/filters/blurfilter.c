@@ -5,8 +5,8 @@
  */
 #include <stdio.h>
 #include "blurfilter.h"
-#include "ppmio.h"
-#include <pthread.h>
+
+
 
 
 pixel* pix(pixel* image, const int xx, const int yy, const int xsize)
@@ -25,6 +25,7 @@ void* blurfilter(void * args){
   int x,y,x2,y2, wi;
   double r,g,b,n, wc;
   
+	// "Rename" all the data given to the thread for easier use
 	thread_data* data = (thread_data*) args;
 	int xsize = data->xsize;
 	int ysize = data->ysize;
@@ -35,7 +36,7 @@ void* blurfilter(void * args){
 	int radius = data->radius;
 	const double *w = data->w;
 
-	
+	// Compute horizontal blur
   for (y=start; y<end; y++) {
     for (x=0; x<xsize; x++) {
       r = w[0] * pix(src, x, y, xsize)->r;
@@ -65,11 +66,10 @@ void* blurfilter(void * args){
     }
   }
 
-	// Barrier wait
-	
-	
+	// Wait until all threads are at this point
 	pthread_barrier_wait(data->barr);
 
+	// Do vertical blur
   for (y=start; y<end; y++) {
     for (x=0; x<xsize; x++) {
       r = w[0] * pix(dst, x, y, xsize)->r;
@@ -98,7 +98,6 @@ void* blurfilter(void * args){
       pix(src,x,y, xsize)->b = b/n;
     }
   }
-
 }
 
 

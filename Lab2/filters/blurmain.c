@@ -61,22 +61,28 @@ int main (int argc, char ** argv) {
     pthread_barrier_t barr;
     pthread_barrier_init(&barr, NULL, nthreads);
 
+    // Create all threads
     for (int i = 0; i < nthreads; ++i)
     {
+        // Decide what each thread will work on
 		int num_rows_per_job = ceil((float)ysize/(float)nthreads);
 		int from_row = (i*num_rows_per_job);
 		int to_row = from_row + num_rows_per_job < ysize ? from_row + num_rows_per_job : ysize;
 		
+        // Give specific data to each thread
         thread_datas[i] = (thread_data){xsize, ysize, from_row, to_row, src, dst, radius, w, &barr};
 		
+        // Create the thread itself
 		pthread_create(threads + i, NULL, blurfilter, thread_datas + i);
 		
 	}
+    // We now wait until all threads are done executing, using join
 	for (int i = 0; i < nthreads; ++i)
 	{
 		pthread_join(threads[i], NULL);
 	}
     
+    // Don't need the barrier anymore
 	pthread_barrier_destroy(&barr);
 
 

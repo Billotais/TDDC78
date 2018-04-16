@@ -1,12 +1,11 @@
 #include "thresfilter.h"
-#include <stdio.h>
 
 void* thresfilter(void * args){
 #define uint unsigned int 
 
   uint sum_local, i, psum;
 
-  // Get data 
+  // "Rename" all the data given to the thread for easier use
 	thread_data* data = (thread_data*) args;
 	int xsize = data->xsize;
 	int ysize = data->ysize;
@@ -20,12 +19,12 @@ void* thresfilter(void * args){
     sum_local += (uint)src[i].r + (uint)src[i].g + (uint)src[i].b;
   }
 
-  // Add it to common sum
+  // Add it to common sum, use locks to prevent synchronisation problems
   pthread_mutex_lock(data->lock);
   *sum += sum_local;
   pthread_mutex_unlock(data->lock);
 
-  // wait until everyone has added its sum 
+  // Wait until everyone has added its sum 
   pthread_barrier_wait(data->barr);
 
   // Get the average value
