@@ -116,12 +116,49 @@ void blurfilter(const int xsize, const int ysize, pixel* src, const int radius, 
   // When applying the blur filter along y, we need to get the processed data from
   // other workers
   // Send top rows to previous section, and next section
-  if (myid) MPI_Send(prov_dst+xsize*radius, xsize*radius, pixel_mpi, myid-1, 10, MPI_COMM_WORLD);
-  if (myid != size_mpi-1) MPI_Recv(prov_dst+counts[myid]+radius*xsize, xsize*radius, pixel_mpi, myid+1, 10, MPI_COMM_WORLD, &status);
   
-  if (myid != size_mpi-1) MPI_Send(prov_dst+counts[myid], xsize*radius, pixel_mpi, myid+1, 20, MPI_COMM_WORLD);
-  if (myid) MPI_Recv(prov_dst, xsize*radius, pixel_mpi, myid-1, 20, MPI_COMM_WORLD, &status);
-  
+  int num_blocks_to_send =  ceil((float)radius / (float)num_rows_per_job);
+
+  for(i=0; i<num_blocks_to_send; i++){
+    int num_elements_to_send;
+    if (i == num_blocks_to_send -1) {
+	  num_elements_to_send = xsize*(radius - i*num_rows_per_job);
+    } else {
+      num_elements_to_send = xsize*num_rows_per_job;
+    }
+ 
+    // Send to block above you
+    if (myid > i) {
+      MPI_Send(prov_dst+xsize*radius, num_elements_to_send, pixel_mpi, myid-1-i, 1000+i, MPI_COMM_WORLD);
+    }
+
+    int num_elements_to_rcv;
+    
+    // Receive from block below you
+    if (myid < size_mpi-1-i) {
+      MPI_Recv(prov_dst+counts[myid]+radius*xsize+i*num_rows_per_job*xsize, num_elements_to_send, pixel_mpi, myid+1+i, 1000+i, MPI_COMM_WORLD, &status);
+    }
+  }
+ 
+  for(i=0; i<num_blocks_to_send; i++){
+    int num_elements_to_send;
+    if (i == num_blocks_to_send -1) {
+	  num_elements_to_send = xsize*(radius - i*num_rows_per_job);
+    } else {
+      num_elements_to_send = xsize*num_rows_per_job;
+    }
+ 
+    // Send to block below you
+    if (myid < size_mpi-1-i) {
+      MPI_Send(prov_dst+xsize*radius + num_rows_per_job*xsize - num_elements_to_send, num_elements_to_send, pixel_mpi, myid+1+i, 2000+i, MPI_COMM_WORLD);
+    }
+
+    // Receive from block above you
+    if (myid > i) {
+      MPI_Recv(prov_dst+radius*xsize-i*num_rows_per_job*xsize-num_elements_to_send, num_elements_to_send, pixel_mpi, myid-1-i, 2000+i, MPI_COMM_WORLD, &status);
+    }
+  } 
+
   // Apply vertical blur
   for (y=radius; y<counts[myid]/xsize+radius; y++)  {
     for (x=0; x<xsize; x++) {
