@@ -50,7 +50,8 @@ int main (int argc, char ** argv) {
     int sum = 0;
 
     // Create all threads
-    for (int i = 0; i < nthreads; ++i)
+    int i;
+    for (i = 0; i < nthreads; ++i)
     {
         // Decide what each thread will work on
 		int num_rows_per_job = ceil((float)ysize/(float)nthreads);
@@ -65,7 +66,7 @@ int main (int argc, char ** argv) {
 		
 	}
     // We now wait until all threads are done executing, using join
-	for (int i = 0; i < nthreads; ++i)
+	for (i = 0; i < nthreads; ++i)
 	{
 		pthread_join(threads[i], NULL);
 	}
