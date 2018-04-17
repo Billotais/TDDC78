@@ -3,3 +3,4 @@ filters/thres
 filters/*~
 *~
 *_out*.ppm
+*slurm*.out
