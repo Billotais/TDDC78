@@ -1,0 +1,5 @@
+filters/blur
+filters/thres
+filters/*~
+*~
+*_out*.ppm

@@ -8,5 +8,8 @@
 module load python/2.7.6 
 module load buildenv-intel/2015-1
 
+make blur
+make thres
+
 python eval_blur.py
 python eval_thres.py
