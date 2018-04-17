@@ -9,7 +9,7 @@ from subprocess import check_output
 # List of images
 images = {"im1", "im2", "im3", "im4"}
 
-num_jobs = range(0, 5)  #7
+num_jobs = range(0, 7)  #7
 num_jobs = [2**i for i in num_jobs]
 
 filter_rad = range(1,8)  #8
@@ -20,7 +20,7 @@ for img in images:
 
 	for n_id, n in enumerate(num_jobs, 0):
 		for r_id, r in enumerate(filter_rad, 0):			
-			cmd_to_run = "mpirun -n " + str(n) + " ./blur " + str(r) + " ../" + img + ".ppm ../" + img + "_out.ppm"
+			cmd_to_run = "mpirun -n " + str(n) + " ./blur " + str(r) + " ../" + img + ".ppm ../" + img + "_out_blur.ppm"
 
 			program_out = check_output(cmd_to_run, shell=True)
 
@@ -44,7 +44,7 @@ for img in images:
 	plt.xticks(num_jobs, xi)
 	plt.title('Time vs Num workers ('+img+')')
 
-	plt.legend()
+	plt.legend(loc='best')
 
 	plt.savefig('plots_blur/'+img+'_plot.png', bbox_inches='tight')
 	plt.close()
@@ -64,9 +64,12 @@ for img in images:
 	
 	xi = [2**n for n in range(0, len(num_jobs))]
 	plt.xticks(num_jobs, xi)
+
+	plt.yticks(num_jobs, xi)
+
 	plt.title('Speedup vs Num workers ('+img+')')
 
-	plt.legend()
+	plt.legend(loc='best')
 
 	plt.savefig('plots_blur/'+img+'_plot_speedup.png', bbox_inches='tight')
 	plt.close()
