@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH -J test1
-#SBATCH -t 00:15:00
+#SBATCH -t 00:55:00
 #SBATCH -N 1
 #SBATCH -A snic2018-7-5
 

@@ -10,13 +10,13 @@ num_jobs = range(0, 5)
 num_jobs = [2**i for i in num_jobs]
 
 grid_size = range(5,15)  
-grid_size = [2**i + 1 for i in grid_size]
+grid_size = [2**i for i in grid_size]
 
 time_all = np.zeros((len(num_jobs), len(grid_size)))
 
 for n_id, n in enumerate(num_jobs, 0):
 	for g_id, g in enumerate(grid_size, 0):			
-		cmd_to_run = "export OMP_NUM_THREADS=" + str(n) + "; echo \""+g+"\" | ./laplsolv "
+		cmd_to_run = "export OMP_NUM_THREADS=" + str(n) + "; echo \""+str(g)+"\" | ./laplsolv "
 
 		program_out = check_output(cmd_to_run, shell=True)
 
@@ -46,7 +46,7 @@ plt.savefig('plots/plot.png', bbox_inches='tight')
 plt.close()
 
 # Plot speedup
-speedup = time_all / time_all[0,:]
+speedup = time_all / (time_all[0,:] + 1e-9 )
 speedup = 1 / speedup
 
 for g_id, g in enumerate(grid_size, 0):
