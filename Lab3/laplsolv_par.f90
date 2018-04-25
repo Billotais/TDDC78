@@ -31,7 +31,7 @@ program laplsolv
 
         !$omp parallel private(j, size_block, from, to, left, curr, right) shared (T,k) reduction(max : error)
 
-        size_block = (n / omp_get_num_threads()) + 1 ! should us ceiling, but didn't work
+        size_block = CEILING(real(n) / omp_get_num_threads()) ! should us ceiling, but didn't work
 
         from = omp_get_thread_num() * size_block ! first column excluded
         to = from + size_block ! last column included
@@ -65,7 +65,7 @@ program laplsolv
     
     t1 = omp_get_wtime()
 
-    write(unit=*,fmt=*) 'Time:',t1-t0,'Number of Iterations:',k_main
+    write(unit=*,fmt=*) 'Time:',t1-t0,'Number of Iterations:',k
     write(unit=*,fmt=*) 'Temperature of element T(1,1)  =',T(1,1)
 
     ! Uncomment the next part if you want to write the whole solution
