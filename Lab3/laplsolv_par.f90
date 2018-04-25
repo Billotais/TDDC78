@@ -6,14 +6,25 @@ program laplsolv
     ! Written by Fredrik Berntsson (frber@math.liu.se) March 2003
     ! Modified by Berkant Savas (besav@math.liu.se) April 2006
     !-----------------------------------------------------------------------
-    integer, parameter                  :: n=100, maxiter=1000
+    integer, parameter                  :: maxiter=1000
+    integer                             :: n
     double precision,parameter          :: tol=1.0E-3
-    double precision,dimension(0:n+1,0:n+1) :: T
-    double precision,dimension(n)       :: left, curr, right
+    double precision,dimension(:,:), ALLOCATABLE     :: T
+    double precision,dimension(:), ALLOCATABLE       :: left, curr, right
     double precision                    :: error
     real                                :: t1,t0
     integer                             :: i,j,k,l_mainsize_block,from,to
     character(len=20)                   :: str
+
+    PRINT *, 'Enter size of square'
+    READ *, n
+
+    PRINT *, 'Using size:  ', n
+
+    ALLOCATE( T(0:n+1,0:n+1) )
+    ALLOCATE(left(n))
+    ALLOCATE(curr(n))
+    ALLOCATE(right(n))
 
     ! Set boundary conditions and initial values for the unknowns
     T=0.0D0
