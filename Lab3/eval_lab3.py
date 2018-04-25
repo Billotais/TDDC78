@@ -9,8 +9,7 @@ from subprocess import check_output
 num_jobs = range(0, 5)  
 num_jobs = [2**i for i in num_jobs]
 
-grid_size = range(5,15)  
-grid_size = [2**i for i in grid_size]
+grid_size = [1000, 2000, 3000, 5000, 10000]  
 
 time_all = np.zeros((len(num_jobs), len(grid_size)))
 
