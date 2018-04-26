@@ -2,7 +2,7 @@
 
 #SBATCH -J test1
 #SBATCH -t 00:55:00
-#SBATCH -N 1
+#SBATCH -n 16
 #SBATCH -A snic2018-7-5
 
 module load python/2.7.6 

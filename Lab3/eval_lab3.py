@@ -9,7 +9,7 @@ from subprocess import check_output
 num_jobs = range(0, 5)  
 num_jobs = [2**i for i in num_jobs]
 
-grid_size = [1000, 2000, 3000, 5000, 10000]  
+grid_size = [1000, 2000, 3000 , 5000, 10000]  
 
 time_all = np.zeros((len(num_jobs), len(grid_size)))
 
@@ -23,6 +23,7 @@ for n_id, n in enumerate(num_jobs, 0):
 		tmp = program_out.split("Time: ")[1]
 		run_time = tmp.split("Number of Iterations:")[0]
 		run_time = float(run_time)
+		print("Runtime is:  " + str(run_time))
 
 		time_all[n_id, g_id] = run_time
 
