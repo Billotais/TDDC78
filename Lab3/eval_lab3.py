@@ -9,7 +9,7 @@ from subprocess import check_output
 num_jobs = range(0, 5)  
 num_jobs = [2**i for i in num_jobs]
 
-grid_size = [1000, 2000, 3000 , 5000, 10000]  
+grid_size = [1000, 2000, 3000, 5000, 10000]  
 
 time_all = np.zeros((len(num_jobs), len(grid_size)))
 
@@ -21,9 +21,9 @@ for n_id, n in enumerate(num_jobs, 0):
 
 		# Find the time
 		tmp = program_out.split("Time: ")[1]
-		run_time = tmp.split("Number of Iterations:")[0]
-		run_time = float(run_time)
-		print("Runtime is:  " + str(run_time))
+		run_time = tmp.split(" ::")[0]
+		run_time = float(run_time.replace("\x00", ""))
+		print("Runtime is:  " + str(run_time) + "  n jobs:  " + str(n) + "n grid:  " + str(g))
 
 		time_all[n_id, g_id] = run_time
 
@@ -35,6 +35,7 @@ for g_id, g in enumerate(grid_size, 0):
 plt.ylabel('Time in secs')
 plt.xlabel('Num workers')
 plt.xscale('log', basex=2)
+plt.yscale('log', basey=2)
 
 xi = [2**n for n in range(0, len(num_jobs))]
 plt.xticks(num_jobs, xi)

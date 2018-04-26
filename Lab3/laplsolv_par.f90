@@ -12,9 +12,10 @@ program laplsolv
     double precision,dimension(:,:), ALLOCATABLE     :: T
     double precision,dimension(:), ALLOCATABLE       :: left, curr, right
     double precision                    :: error
-    real                                :: t1,t0
+    double precision                                :: t1,t0
     integer                             :: i,j,k,l_mainsize_block,from,to
     character(len=20)                   :: str
+    CHARACTER(LEN=30)                   :: Format
 
     PRINT *, 'Enter size of square'
     READ *, n
@@ -76,7 +77,7 @@ program laplsolv
     
     t1 = omp_get_wtime()
 
-    write(unit=*,fmt=*) 'Time:',t1-t0,'Number of Iterations:',k
+    write(unit=*,fmt=*) 'Time:',(t1-t0), ' ::'
     write(unit=*,fmt=*) 'Temperature of element T(1,1)  =',T(1,1)
 
     ! Uncomment the next part if you want to write the whole solution
