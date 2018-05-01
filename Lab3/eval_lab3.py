@@ -35,7 +35,7 @@ for g_id, g in enumerate(grid_size, 0):
 plt.ylabel('Time in secs')
 plt.xlabel('Num workers')
 plt.xscale('log', basex=2)
-#plt.yscale('log', basey=2)
+plt.yscale('log', basey=2)
 
 xi = [2**n for n in range(0, len(num_jobs))]
 plt.xticks(num_jobs, xi)
