@@ -96,7 +96,7 @@ int main(int argc, char** argv){
 	//forward_list<bool> collisions();
 	bool *collisions=(bool *)malloc(INIT_NO_PARTICLES*sizeof(bool) );
 
-	srand( /*time(NULL) +*/ 1234 );
+	srand( time(NULL) + 1234 );
 
 	float r, a;
 	for(int i=0; i<INIT_NO_PARTICLES/mpi_size; i++){
@@ -180,8 +180,8 @@ int main(int argc, char** argv){
 		int up_size = send_up.size();
 		int down_size = send_down.size();
 		
-		int up_receive_size;
-		int down_receive_size;
+		int up_receive_size=0;
+		int down_receive_size=0;
 		
 		if (myid > 0) MPI_Send(&up_size, 1, MPI_INT, myid-1, 0, MPI_COMM_WORLD);
 		if (myid < mpi_size - 1) MPI_Send(&down_size, 1, MPI_INT, myid+1, 0, MPI_COMM_WORLD);
