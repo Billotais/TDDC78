@@ -2,6 +2,7 @@
 
 sequential:main_sequential.c  physics.c
 	gcc -std=c99 -g -o $@ $^ -lrt -lm
-
+parallel: main_parallel.cpp physics.c
+	mpicxx -std=c++11 -g -o $@ $^ -lrt -lm -Nmpi
 allclean:
 	-rm *.o sequential
