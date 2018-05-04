@@ -32,7 +32,7 @@ int main(int argc, char** argv){
 
 
 	unsigned int time_stamp = 0, time_max, total_num_particles, box_size, wall_length;
-  double stime, etime;
+	double stime, etime;
 	float pressure = 0;
 
 
@@ -44,10 +44,10 @@ int main(int argc, char** argv){
 	}
 
 	time_max = atoi(argv[1]);
-  box_size = atoi(argv[2]);
-  total_num_particles = atoi(argv[3]);
+	box_size = atoi(argv[2]);
+	total_num_particles = atoi(argv[3]);
 
-  wall_length = (2.0*box_size+2.0*box_size);
+	wall_length = (2.0*box_size+2.0*box_size);
 
 	// Init MPI
 	MPI_Init(NULL, NULL);
@@ -156,20 +156,21 @@ int main(int argc, char** argv){
 				pressure += wall_collide(&(*it_p), wall);
 			}
 			
+		// We now find the particls we have to send to other threads
 		vector<pcord_t> send_up;
 		vector<pcord_t> send_down;
 		
 		auto it_p = particles.begin(); 
 		while (it_p != particles.end())
 		{
-			if ((*it_p).y < up_limit && myid > 0) 
+			if ((*it_p).y < up_limit && myid > 0) // If the particle goes up
 			{
 				auto old_it = it_p;
 				it_p++;
 				send_up.push_back(*old_it);
 				particles.erase(old_it);
 			}
-			else if ((*it_p).y > up_limit && myid < mpi_size-1) 
+			else if ((*it_p).y > up_limit && myid < mpi_size-1) // f the particle goes down
 			{
 				auto old_it = it_p;
 				it_p++;
@@ -187,6 +188,8 @@ int main(int argc, char** argv){
 		int up_receive_size=0;
 		int down_receive_size=0;
 		
+		
+		// Send the sizes
 		if (myid > 0) MPI_Send(&up_size, 1, MPI_INT, myid-1, 0, MPI_COMM_WORLD);
 		if (myid < mpi_size - 1) MPI_Send(&down_size, 1, MPI_INT, myid+1, 0, MPI_COMM_WORLD);
 		
@@ -200,6 +203,9 @@ int main(int argc, char** argv){
 		pcord_t* receive_down = (pcord_t*)malloc(down_receive_size*sizeof(pcord_t));
 		
 
+
+		// Send the data
+		
 		if(up_size > 0){ // Send it up
 			pcord_t* up_array = &send_up[0];
 			MPI_Send(up_array, up_size, pcord_t_mpi, myid-1, 1, MPI_COMM_WORLD);
@@ -210,7 +216,7 @@ int main(int argc, char** argv){
 			MPI_Send(down_array, down_size, pcord_t_mpi, myid+1, 1, MPI_COMM_WORLD);
 		 }
 		 
-		 
+		 // receive the data
 		 if(up_receive_size > 0){ // receive it up
 			MPI_Recv(receive_up, up_receive_size, pcord_t_mpi, myid-1, 1, MPI_COMM_WORLD, &status);
 		}
@@ -237,23 +243,23 @@ int main(int argc, char** argv){
 	float pressure_all;
 	MPI_Reduce(&pressure, &pressure_all, 1, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD);
 	
-  etime = MPI_Wtime();
+	etime = MPI_Wtime();
 
 	if (myid==0) {
 		printf("Average pressure = %f units\n\n", pressure_all / (wall_length*time_max));
 	}
 	
-  double total_time = etime - stime;
-  double total_time_all;
+	double total_time = etime - stime;
+	double total_time_all;
 
-  // Get time from all workers
-  MPI_Reduce(&total_time, &total_time_all, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-  total_time_all = total_time_all / (float)mpi_size;
+	// Get time from all workers
+	MPI_Reduce(&total_time, &total_time_all, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+	total_time_all = total_time_all / (float)mpi_size;
 
-  /* write result */
-  if (myid == 0) {
-    printf("Average filtering time: %g secs\n", total_time_all) ;
-  }
+	/* write result */
+	if (myid == 0) {
+		printf("Average simulation time: %g secs\n", total_time_all) ;
+	}
 	//free(particles);
 	free(collisions);
 
