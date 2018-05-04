@@ -31,20 +31,23 @@ void init_collisions(bool *collisions, unsigned int max){
 int main(int argc, char** argv){
 
 
-	unsigned int time_stamp = 0, time_max;
+	unsigned int time_stamp = 0, time_max, total_num_particles, box_size, wall_length;
+  double stime, etime;
 	float pressure = 0;
 
 
 	// parse arguments
-	if(argc != 2) {
-		fprintf(stderr, "Usage: %s simulation_time\n", argv[0]);
-		fprintf(stderr, "For example: %s 10\n", argv[0]);
+	if(argc != 4) {
+		fprintf(stderr, "Usage: %s simulation_time box_size total_num_particles \n", argv[0]);
+		fprintf(stderr, "For example: %s 10 1000 500\n", argv[0]);
 		exit(1);
 	}
 
 	time_max = atoi(argv[1]);
+  box_size = atoi(argv[2]);
+  total_num_particles = atoi(argv[3]);
 
-
+  wall_length = (2.0*box_size+2.0*box_size);
 
 	// Init MPI
 	MPI_Init(NULL, NULL);
@@ -72,19 +75,19 @@ int main(int argc, char** argv){
 
 	MPI_Type_struct(4, block_length, displ, block_types, &pcord_t_mpi);
 	MPI_Type_commit(&pcord_t_mpi);
-	
+	MPI_Status status;
 	
 	/* Initialize */
 	// 1. set the walls
 	cord_t wall;
 	wall.y0 = wall.x0 = 0;
-	wall.x1 = BOX_HORIZ_SIZE;
-	wall.y1 = BOX_VERT_SIZE;
+	wall.x1 = box_size;
+	wall.y1 = box_size;
 	
-	int section_size = BOX_VERT_SIZE / mpi_size;
+	int section_size = box_size / mpi_size;
 	float up_limit = myid * section_size; // Included
 	float down_limit = ((myid+1) * section_size) -1; // Included
-	down_limit = down_limit >= BOX_VERT_SIZE ? BOX_VERT_SIZE - 1 : down_limit;
+	down_limit = down_limit >= box_size ? box_size - 1 : down_limit;
 	
 	
 
@@ -92,17 +95,17 @@ int main(int argc, char** argv){
     
 	// 2. allocate particle bufer and initialize the particles
 	list<pcord_t> particles;
-	//pcord_t *particles = (pcord_t*) malloc(INIT_NO_PARTICLES*sizeof(pcord_t));
+	//pcord_t *particles = (pcord_t*) malloc(total_num_particles*sizeof(pcord_t));
 	//forward_list<bool> collisions();
-	bool *collisions=(bool *)malloc(INIT_NO_PARTICLES*sizeof(bool) );
+	bool *collisions=(bool *)malloc(total_num_particles*sizeof(bool) );
 
-	srand( time(NULL) + 1234 );
+	srand(time(NULL) + 1234 );
 
 	float r, a;
-	for(int i=0; i<INIT_NO_PARTICLES/mpi_size; i++){
+	for(int i=0; i<total_num_particles/mpi_size; i++){
 		// initialize random position
 		pcord_t p;
-		p.x = wall.x0 + rand1()*BOX_HORIZ_SIZE;
+		p.x = wall.x0 + rand1()*box_size;
 		p.y = up_limit + rand1()*section_size;
 
 		// initialize random velocity
@@ -116,13 +119,14 @@ int main(int argc, char** argv){
 
 	unsigned int p, pp;
 
+  stime = MPI_Wtime();
 	/* Main loop */
 	for (time_stamp=0; time_stamp<time_max; time_stamp++) { // for each time stamp
 
 		
-		init_collisions(collisions, INIT_NO_PARTICLES);
+		init_collisions(collisions, total_num_particles);
 		
-		//for(p=0; p<INIT_NO_PARTICLES; p++) { // for all particles
+		//for(p=0; p<total_num_particles; p++) { // for all particles
 		int p_index = 0;
 		for (auto it_p = particles.begin(); it_p != particles.end(); ++it_p) {
 			if(collisions[p_index]) continue; // If this particle has already collided qith a previous particle, ignore
@@ -186,8 +190,8 @@ int main(int argc, char** argv){
 		if (myid > 0) MPI_Send(&up_size, 1, MPI_INT, myid-1, 0, MPI_COMM_WORLD);
 		if (myid < mpi_size - 1) MPI_Send(&down_size, 1, MPI_INT, myid+1, 0, MPI_COMM_WORLD);
 		
-		if (myid > 0) MPI_Recv(&up_receive_size, 1, MPI_INT, myid-1, 0, MPI_COMM_WORLD, NULL);
-		if (myid < mpi_size - 1) MPI_Recv(&down_receive_size, 1, MPI_INT, myid+1, 0, MPI_COMM_WORLD, NULL);
+		if (myid > 0) MPI_Recv(&up_receive_size, 1, MPI_INT, myid-1, 0, MPI_COMM_WORLD, &status);
+		if (myid < mpi_size - 1) MPI_Recv(&down_receive_size, 1, MPI_INT, myid+1, 0, MPI_COMM_WORLD, &status);
 		
 		
 		
@@ -208,11 +212,11 @@ int main(int argc, char** argv){
 		 
 		 
 		 if(up_receive_size > 0){ // receive it up
-			MPI_Recv(receive_up, up_receive_size, pcord_t_mpi, myid-1, 1, MPI_COMM_WORLD, NULL);
+			MPI_Recv(receive_up, up_receive_size, pcord_t_mpi, myid-1, 1, MPI_COMM_WORLD, &status);
 		}
 		
 		if(down_receive_size > 0) { 
-			MPI_Recv(receive_down, down_receive_size, pcord_t_mpi, myid+1, 1, MPI_COMM_WORLD, NULL);
+			MPI_Recv(receive_down, down_receive_size, pcord_t_mpi, myid+1, 1, MPI_COMM_WORLD, &status);
 		 }
 		
 		
@@ -233,10 +237,23 @@ int main(int argc, char** argv){
 	float pressure_all;
 	MPI_Reduce(&pressure, &pressure_all, 1, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD);
 	
+  etime = MPI_Wtime();
+
 	if (myid==0) {
-		printf("Average pressure = %f\n", pressure_all / (WALL_LENGTH*time_max));
+		printf("Average pressure = %f units\n\n", pressure_all / (wall_length*time_max));
 	}
 	
+  double total_time = etime - stime;
+  double total_time_all;
+
+  // Get time from all workers
+  MPI_Reduce(&total_time, &total_time_all, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+  total_time_all = total_time_all / (float)mpi_size;
+
+  /* write result */
+  if (myid == 0) {
+    printf("Average filtering time: %g secs\n", total_time_all) ;
+  }
 	//free(particles);
 	free(collisions);
 
