@@ -51,7 +51,7 @@ int main(int argc, char** argv){
 	pcord_t *particles = (pcord_t*) malloc(INIT_NO_PARTICLES*sizeof(pcord_t));
 	bool *collisions=(bool *)malloc(INIT_NO_PARTICLES*sizeof(bool) );
 
-	srand( /*time(NULL)*/ + 1234 );
+	srand( time(NULL) + 1234 );
 
 	float r, a;
 	for(int i=0; i<INIT_NO_PARTICLES; i++){
