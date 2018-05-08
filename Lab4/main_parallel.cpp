@@ -4,6 +4,7 @@
 #include <math.h>
 #include <stdbool.h>
 #include "mpi.h"
+#include <VT.h>
 
 
 #include "coordinate.h"
@@ -12,6 +13,8 @@
 
 #include <list>
 #include <vector>
+
+
 
 using namespace std;
 
@@ -90,13 +93,13 @@ int main(int argc, char** argv){
 	down_limit = down_limit >= box_size ? box_size - 1 : down_limit;
 	
 	
-
-	
+	///////////////////////
+	int vt_alloc;
+	VT_funcdef("Alloc", VT_NOCLASS, &vt_alloc);
+    VT_begin(vt_alloc);
     
 	// 2. allocate particle bufer and initialize the particles
 	list<pcord_t> particles;
-	//pcord_t *particles = (pcord_t*) malloc(total_num_particles*sizeof(pcord_t));
-	//forward_list<bool> collisions();
 	bool *collisions=(bool *)malloc(total_num_particles*sizeof(bool) );
 
 	srand(time(NULL) + 1234 );
@@ -115,14 +118,26 @@ int main(int argc, char** argv){
 		p.vy = r*sin(a);
 		particles.push_front(p);
 	}
+	VT_end(vt_alloc);
 
 
 	unsigned int p, pp;
 
-  stime = MPI_Wtime();
+    stime = MPI_Wtime();
+    
+    
+    int vt_mainloop;
+	VT_funcdef("Main Loop", VT_NOCLASS, &vt_mainloop);
+    
+    VT_begin(vt_mainloop);
+    
 	/* Main loop */
 	for (time_stamp=0; time_stamp<time_max; time_stamp++) { // for each time stamp
-
+		
+		///////////////////////
+		int vt_simulate;
+		VT_funcdef("Simulate", VT_NOCLASS, &vt_simulate);
+		VT_begin(vt_simulate);
 		
 		init_collisions(collisions, total_num_particles);
 		
@@ -155,7 +170,18 @@ int main(int argc, char** argv){
 				/* check for wall interaction and add the momentum */
 				pressure += wall_collide(&(*it_p), wall);
 			}
-			
+		
+		
+		VT_end(vt_simulate);
+		/////////////////////	
+		
+		
+		///////////////////////
+		int vt_tosend;
+		VT_funcdef("Find to send", VT_NOCLASS, &vt_tosend);
+		VT_begin(vt_tosend);
+		
+		
 		// We now find the particls we have to send to other threads
 		vector<pcord_t> send_up;
 		vector<pcord_t> send_down;
@@ -180,6 +206,13 @@ int main(int argc, char** argv){
 			else it_p++;
 		}
 		
+		
+		VT_end(vt_tosend);
+		///////////////////
+		int vt_send_size;
+		VT_funcdef("Send sizes", VT_NOCLASS, &vt_send_size);
+		VT_begin(vt_send_size);
+		
 		// Put in static arrays
 		
 		int up_size = send_up.size();
@@ -197,13 +230,20 @@ int main(int argc, char** argv){
 		if (myid < mpi_size - 1) MPI_Recv(&down_receive_size, 1, MPI_INT, myid+1, 0, MPI_COMM_WORLD, &status);
 		
 		
+		VT_end(vt_send_size);
+		////////////////////
+		
 		
 		
 		pcord_t* receive_up = (pcord_t*)malloc(up_receive_size*sizeof(pcord_t));
 		pcord_t* receive_down = (pcord_t*)malloc(down_receive_size*sizeof(pcord_t));
 		
 
-
+		///////////////////////
+		int vt_send_part;
+		VT_funcdef("Send particles", VT_NOCLASS, &vt_send_part);
+		VT_begin(vt_send_part);
+		
 		// Send the data
 		
 		if(up_size > 0){ // Send it up
@@ -214,16 +254,23 @@ int main(int argc, char** argv){
 		if(down_size > 0) { 
 			pcord_t* down_array = &send_down[0];
 			MPI_Send(down_array, down_size, pcord_t_mpi, myid+1, 1, MPI_COMM_WORLD);
-		 }
+		}
 		 
-		 // receive the data
-		 if(up_receive_size > 0){ // receive it up
+		// receive the data
+		if(up_receive_size > 0){ // receive it up
 			MPI_Recv(receive_up, up_receive_size, pcord_t_mpi, myid-1, 1, MPI_COMM_WORLD, &status);
 		}
 		
 		if(down_receive_size > 0) { 
 			MPI_Recv(receive_down, down_receive_size, pcord_t_mpi, myid+1, 1, MPI_COMM_WORLD, &status);
-		 }
+		}
+		VT_end(vt_send_part);
+		//////////////////////
+		
+		///////////////////////
+		int vt_update_part;
+		VT_funcdef("Send particles", VT_NOCLASS, &vt_update_part);
+		VT_begin(vt_update_part);
 		
 		
 		// Add to particles
@@ -237,25 +284,47 @@ int main(int argc, char** argv){
 		
 		free(receive_up);
 		free(receive_down);
+		VT_end(vt_update_part);
+		//////////////////////
 	}
+	
+	VT_end(vt_mainloop);
+	///////////////////////
 
+
+
+	///////////////////////
+	int vt_gather_pressure;
+	VT_funcdef("Gather pressure", VT_NOCLASS, &vt_gather_pressure);
+    VT_begin(vt_gather_pressure);
+    
+    
 	// Gather all pressure
 	float pressure_all;
 	MPI_Reduce(&pressure, &pressure_all, 1, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD);
+	
+	VT_end(vt_gather_pressure);
+	///////////////////////
 	
 	etime = MPI_Wtime();
 
 	if (myid==0) {
 		printf("Average pressure = %f units\n\n", pressure_all / (wall_length*time_max));
 	}
-	
+	///////////////////////
+	int vt_gather_time;
+	VT_funcdef("Gather time", VT_NOCLASS, &vt_gather_time);
+    VT_begin(vt_gather_time);
+    
 	double total_time = etime - stime;
 	double total_time_all;
 
 	// Get time from all workers
 	MPI_Reduce(&total_time, &total_time_all, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 	total_time_all = total_time_all / (float)mpi_size;
-
+	
+	VT_end(vt_gather_time);
+	///////////////////////
 	/* write result */
 	if (myid == 0) {
 		printf("Average simulation time: %g secs\n", total_time_all) ;
