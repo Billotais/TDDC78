@@ -33,6 +33,23 @@ void init_collisions(bool *collisions, unsigned int max){
 
 int main(int argc, char** argv){
 
+	int vt_alloc;
+	VT_funcdef("Alloc", VT_NOCLASS, &vt_alloc);
+	int vt_simulate;
+	VT_funcdef("Simulate", VT_NOCLASS, &vt_simulate);
+	int vt_tosend;
+	VT_funcdef("Find to send", VT_NOCLASS, &vt_tosend);
+	int vt_send_size;
+	VT_funcdef("Send sizes", VT_NOCLASS, &vt_send_size);
+	int vt_send_part;
+	VT_funcdef("Send particles", VT_NOCLASS, &vt_send_part);
+	int vt_update_part;
+	VT_funcdef("Update particles", VT_NOCLASS, &vt_update_part);
+	int vt_gather_pressure;
+	VT_funcdef("Gather pressure", VT_NOCLASS, &vt_gather_pressure);
+	int vt_gather_time;
+	VT_funcdef("Gather time", VT_NOCLASS, &vt_gather_time);
+
 
 	unsigned int time_stamp = 0, time_max, total_num_particles, box_size, wall_length;
 	double stime, etime;
@@ -94,8 +111,6 @@ int main(int argc, char** argv){
 	
 	
 	///////////////////////
-	int vt_alloc;
-	VT_funcdef("Alloc", VT_NOCLASS, &vt_alloc);
     VT_begin(vt_alloc);
     
 	// 2. allocate particle bufer and initialize the particles
@@ -119,24 +134,19 @@ int main(int argc, char** argv){
 		particles.push_front(p);
 	}
 	VT_end(vt_alloc);
+	///////////////////7
 
 
 	unsigned int p, pp;
 
     stime = MPI_Wtime();
     
-    
-    int vt_mainloop;
-	VT_funcdef("Main Loop", VT_NOCLASS, &vt_mainloop);
-    
-    VT_begin(vt_mainloop);
+   
     
 	/* Main loop */
 	for (time_stamp=0; time_stamp<time_max; time_stamp++) { // for each time stamp
 		
 		///////////////////////
-		int vt_simulate;
-		VT_funcdef("Simulate", VT_NOCLASS, &vt_simulate);
 		VT_begin(vt_simulate);
 		
 		init_collisions(collisions, total_num_particles);
@@ -175,10 +185,7 @@ int main(int argc, char** argv){
 		VT_end(vt_simulate);
 		/////////////////////	
 		
-		
 		///////////////////////
-		int vt_tosend;
-		VT_funcdef("Find to send", VT_NOCLASS, &vt_tosend);
 		VT_begin(vt_tosend);
 		
 		
@@ -209,8 +216,8 @@ int main(int argc, char** argv){
 		
 		VT_end(vt_tosend);
 		///////////////////
-		int vt_send_size;
-		VT_funcdef("Send sizes", VT_NOCLASS, &vt_send_size);
+		
+		///////////////////
 		VT_begin(vt_send_size);
 		
 		// Put in static arrays
@@ -240,8 +247,6 @@ int main(int argc, char** argv){
 		
 
 		///////////////////////
-		int vt_send_part;
-		VT_funcdef("Send particles", VT_NOCLASS, &vt_send_part);
 		VT_begin(vt_send_part);
 		
 		// Send the data
@@ -268,8 +273,6 @@ int main(int argc, char** argv){
 		//////////////////////
 		
 		///////////////////////
-		int vt_update_part;
-		VT_funcdef("Send particles", VT_NOCLASS, &vt_update_part);
 		VT_begin(vt_update_part);
 		
 		
@@ -284,18 +287,14 @@ int main(int argc, char** argv){
 		
 		free(receive_up);
 		free(receive_down);
+		
 		VT_end(vt_update_part);
 		//////////////////////
 	}
 	
-	VT_end(vt_mainloop);
-	///////////////////////
-
 
 
 	///////////////////////
-	int vt_gather_pressure;
-	VT_funcdef("Gather pressure", VT_NOCLASS, &vt_gather_pressure);
     VT_begin(vt_gather_pressure);
     
     
@@ -312,8 +311,7 @@ int main(int argc, char** argv){
 		printf("Average pressure = %f units\n\n", pressure_all / (wall_length*time_max));
 	}
 	///////////////////////
-	int vt_gather_time;
-	VT_funcdef("Gather time", VT_NOCLASS, &vt_gather_time);
+	
     VT_begin(vt_gather_time);
     
 	double total_time = etime - stime;
