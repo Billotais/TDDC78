@@ -33,6 +33,7 @@ void init_collisions(bool *collisions, unsigned int max){
 
 int main(int argc, char** argv){
 
+	// Define all sections for ITAC
 	int vt_alloc;
 	VT_funcdef("Alloc", VT_NOCLASS, &vt_alloc);
 	int vt_simulate;
@@ -104,6 +105,7 @@ int main(int argc, char** argv){
 	wall.x1 = box_size;
 	wall.y1 = box_size;
 	
+	// Limit of each section
 	int section_size = box_size / mpi_size;
 	float up_limit = myid * section_size; // Included
 	float down_limit = ((myid+1) * section_size) -1; // Included
@@ -151,7 +153,7 @@ int main(int argc, char** argv){
 		
 		init_collisions(collisions, total_num_particles);
 		
-		//for(p=0; p<total_num_particles; p++) { // for all particles
+		// for all particles
 		int p_index = 0;
 		for (auto it_p = particles.begin(); it_p != particles.end(); ++it_p) {
 			if(collisions[p_index]) continue; // If this particle has already collided qith a previous particle, ignore
@@ -229,7 +231,7 @@ int main(int argc, char** argv){
 		int down_receive_size=0;
 		
 		
-		// Send the sizes
+		// Send and receive the sizes
 		if (myid > 0) MPI_Send(&up_size, 1, MPI_INT, myid-1, 0, MPI_COMM_WORLD);
 		if (myid < mpi_size - 1) MPI_Send(&down_size, 1, MPI_INT, myid+1, 0, MPI_COMM_WORLD);
 		
@@ -241,7 +243,7 @@ int main(int argc, char** argv){
 		////////////////////
 		
 		
-		
+		// Allocate arrays to receive particles
 		pcord_t* receive_up = (pcord_t*)malloc(up_receive_size*sizeof(pcord_t));
 		pcord_t* receive_down = (pcord_t*)malloc(down_receive_size*sizeof(pcord_t));
 		
@@ -256,7 +258,7 @@ int main(int argc, char** argv){
 			MPI_Send(up_array, up_size, pcord_t_mpi, myid-1, 1, MPI_COMM_WORLD);
 		}
 		
-		if(down_size > 0) { 
+		if(down_size > 0) {  // Send it down
 			pcord_t* down_array = &send_down[0];
 			MPI_Send(down_array, down_size, pcord_t_mpi, myid+1, 1, MPI_COMM_WORLD);
 		}
@@ -266,7 +268,7 @@ int main(int argc, char** argv){
 			MPI_Recv(receive_up, up_receive_size, pcord_t_mpi, myid-1, 1, MPI_COMM_WORLD, &status);
 		}
 		
-		if(down_receive_size > 0) { 
+		if(down_receive_size > 0) { // receive it down
 			MPI_Recv(receive_down, down_receive_size, pcord_t_mpi, myid+1, 1, MPI_COMM_WORLD, &status);
 		}
 		VT_end(vt_send_part);
