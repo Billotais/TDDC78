@@ -10,6 +10,7 @@
 #include "ppmio.h"
 #include <mpi.h>
 #include <math.h>
+#include <VT.h>
 
 pixel* pix(pixel* image, const int xx, const int yy, const int xsize)
 {
@@ -84,6 +85,10 @@ void blurfilter(const int xsize, const int ysize, pixel* src, const int radius, 
   // Scatter
   MPI_Scatterv(src, counts, offsets, pixel_mpi, rcv_buf, counts[myid], pixel_mpi, 0, MPI_COMM_WORLD);
   
+  int vt_b_hor;
+	VT_funcdef("Horizontal blur", VT_NOCLASS, &vt_b_hor);
+
+  VT_begin(vt_b_hor);
   for (y=0; y<counts[myid]/xsize; y++) { // For each row
     for (x=0; x<xsize; x++) {
       r = w[0] * pix(rcv_buf, x, y, xsize)->r;
@@ -112,6 +117,7 @@ void blurfilter(const int xsize, const int ysize, pixel* src, const int radius, 
       pix(prov_dst,x,y+radius, xsize)->b = b/n;
     }
   }
+  VT_end(vt_b_hor);
   
   // When applying the blur filter along y, we need to get the processed data from
   // other workers
@@ -160,6 +166,11 @@ void blurfilter(const int xsize, const int ysize, pixel* src, const int radius, 
   } 
 
   // Apply vertical blur
+
+  int vt_v_hor;
+	VT_funcdef("Vertical blur", VT_NOCLASS, &vt_v_hor);
+
+  VT_begin(vt_b_hor);
   for (y=radius; y<counts[myid]/xsize+radius; y++)  {
     for (x=0; x<xsize; x++) {
       r = w[0] * pix(prov_dst, x, y, xsize)->r;
@@ -190,7 +201,7 @@ void blurfilter(const int xsize, const int ysize, pixel* src, const int radius, 
       pix(rcv_buf,x,y-radius, xsize)->b = b/n;
     }
   }
-
+  VT_end(vt_b_hor);
 
   MPI_Gatherv(rcv_buf, counts[myid], pixel_mpi, src, counts, offsets, pixel_mpi, 0, MPI_COMM_WORLD);
 
